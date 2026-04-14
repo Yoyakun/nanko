@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>佐倉南高校線 現在位置 <平日> </title>
+
+<style>
+body { margin: 0; font-family: sans-serif; background: #eee; }
+.container { width: 380px; margin: auto; background: #ddd; position: relative; }
+.header { display: flex; justify-content: space-between; padding: 8px 10px; font-size: 14px; }
+.row { display: flex; align-items: center; height: 44px; position: relative; }
+.stop { width: 150px; padding-left: 8px; }
+.line { flex: 1; height: 2px; background: black; }
+.gap-line { position: absolute; left: 150px; right: 0; border-top: 2px dashed black; }
+.overlay { position: absolute; top: 30px; left: 150px; right: 0; bottom: 0; pointer-events: none; }
+.v { position: absolute; width: 3px; background: #0074C6; }
+.bus {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 10;
+
+  width: 34px;   /* ←サイズをここで調整 */
+  height: 34px;
+}
+
+/* 👇 新しく追加 */
+.bus img {
+  width: 100%;
+  height: 100%;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div>佐倉南高校線 現在位置情報 <平日> </div>
+    <div id="time">現在時刻: --:--</div>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="overlay">
+    <div class="v" style="left:20px; top:0; height:340px;"></div>
+    <div class="v" style="left:60px; top:0; height:340px;"></div>
+
+  </div>
+
+</div>
+
+<!-- 運用表画像 -->
+<div id="diagramBox" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0008; text-align:center;">
+  <img id="diagramImg" src="" style="max-width:90%; max-height:90%; margin-top:5%;">
+</div>
+
+<script>
+// 停留所
+const stops = [
+  "ＪＲ佐倉駅南口","大崎台一丁目","寺崎小学校","根郷保育園","大崎台四丁目",
+  "大崎台公園","大崎台五丁目","佐倉南高校"
+];
+
+const stopIndexMap = {};
+stops.forEach((name, i) => { stopIndexMap[name] = i; });
+
+const stopPositions = {
+  "ＪＲ佐倉駅南口": 50,
+  "大崎台一丁目": 100,
+  "寺崎小学校": 145,
+  "根郷保育園": 187,
+  "大崎台四丁目": 231,
+  "大崎台公園": 275,
+  "大崎台五丁目": 319,
+  "佐倉南高校": 365
+};
+
+// 停留所リスト描画
+const list = document.getElementById("list");
+stops.forEach((name,i)=>{
+  const row = document.createElement("div");
+  row.className = "row";
+  row.dataset.index = i;
+  row.innerHTML = `<div class="stop">${name}</div><div class="line"></div>`;
+  list.appendChild(row);
+
+});
+
+// 時刻表示
+function updateTime(){
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById("time").innerText = `現在時刻: ${h}:${m}:${s}`;
+}
+setInterval(updateTime,1000);
+updateTime();
+
+// バス情報
+const busInfos = [
+//S1701
+  { destination:"ＪＲ佐倉駅南口", route:"669系統", display:"170-4番", via:"佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_jrsakura.png", diagram:"table/someino/W_U501.png" },//佐倉南高校→JR佐倉駅南口 0
+  { destination:"ＪＲ佐倉駅南口", route:"666系統", display:"170-1番", via:"ＪＲ佐倉駅南口～佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", diagram:"table/someino/W_U501.png" },//定時 高校先回り 1
+  { destination:"ＪＲ佐倉駅南口", route:"666系統", display:"170-1番", via:"ＪＲ佐倉駅南口～佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 高校先回り 2
+  { destination:"ＪＲ佐倉駅南口", route:"666系統", display:"170-1番", via:"ＪＲ佐倉駅南口～佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"約3～5分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 高校先回り 3
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", diagram:"table/someino/W_U501.png" },//定時 団地回り 4
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 団地回り 5
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"約4～9分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 団地先回り 6
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"約10～20分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 団地先回り 7
+  { destination:"ＪＲ佐倉駅南口", route:"668系統", display:"170-3番", via:"ＪＲ佐倉駅南口～佐倉南高校", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_minami.png", diagram:"table/someino/W_U501.png" },//佐倉南高校→JR佐倉駅南口 8
+  //S1702
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"定着", diagram:"table/someino/W_U501.png" },//定時 団地回り 9
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 団地回り 10
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約4～9分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 団地先回り 11
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約10～15分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 団地先回り 12
+
+  //S1702 終前終車
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番 終前", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 団地回り 13
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番 終車", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 団地回り 14
+  { destination:"ＪＲ佐倉駅南口", route:"668系統", display:"170-3番 終車", via:"ＪＲ佐倉駅南口～佐倉南高校", number:"S1702", delay:"定着", icon:"icon/nanko/cg752_minami.png", diagram:"table/someino/W_U501.png" },//佐倉南高校→JR佐倉駅南口 15
+
+  //南校回送
+  { destination:"佐倉南高校", route:"00系統", display:"000-1番", via:"田町車庫～佐倉南高校", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_kaiso.png", diagram:"table/someino/W_U501.png" },//田町車庫→佐倉南高校 16
+  { destination:"ＪＲ佐倉駅南口", route:"00系統", display:"000-1番", via:"田町車庫～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_kaiso.png", diagram:"table/someino/W_U501.png" },//田町車庫→JR佐倉駅南口 17
+  { destination:"田町車庫", route:"00系統", display:"000-1番", via:"ＪＲ佐倉駅南口～田町車庫", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_kaiso.png", diagram:"table/someino/W_U501.png" },//JR佐倉駅南口→田町車庫 18
+  { destination:"ＪＲ佐倉駅南口", route:"00系統", display:"000-1番", via:"田町車庫～ＪＲ佐倉駅南口", number:"S1702", delay:"定着", icon:"icon/nanko/LR_kaiso.png", diagram:"table/someino/W_U501.png" },//田町車庫→JR佐倉駅南口 19
+  { destination:"田町車庫", route:"00系統", display:"000-1番", via:"ＪＲ佐倉駅南口～田町車庫", number:"S1702", delay:"定着", icon:"icon/nanko/LR_kaiso.png", diagram:"table/someino/W_U501.png" },//JR佐倉駅南口→田町車庫 20
+];
+
+// バススケジュール（全便 6時～22時）
+const busSchedules = [];
+
+//S1701 運用
+
+for(let h=5; h<=24; h++){
+  const schedule = [
+    {stop:"寺崎小学校", time:6*60+2.25}, {stop:"佐倉南高校", time:6*60+4.50}
+  ];
+  busSchedules.push({ schedule, info: busInfos[18], arrow:"⬇️", left:212, startOffset:2 });
+}//田町車庫556 回送 南校
+
+for(let h=5; h<=24; h++){
+  const schedule = [
+    {stop:"佐倉南高校", time:6*60+7}, {stop:"大崎台五丁目", time:6*60+8},
+    {stop:"大崎台公園", time:6*60+9}, {stop:"大崎台四丁目", time:6*60+10},
+    {stop:"根郷保育園", time:6*60+11}, {stop:"寺崎小学校", time:6*60+12},
+    {stop:"大崎台一丁目", time:6*60+13}, {stop:"ＪＲ佐倉駅南口", time:6*60+15}
+  ];
+  busSchedules.push({ schedule, info: busInfos[0], arrow:"⬆️", left:172, startOffset:2 });
+}//南校607
+
+// --- 南高校先回り ---
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:6*60+19, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:6*60+20.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:6*60+21.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:6*60+24, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:6*60+26, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:6*60+27, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:6*60+28, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:6*60+29, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:6*60+30, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:6*60+31, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:6*60+32.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[1], startOffset:3 });
+}//南口619
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:6*60+37, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:6*60+38.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:6*60+39.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:6*60+43, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:6*60+44, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:6*60+45, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:6*60+46, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:6*60+47, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:6*60+48.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:6*60+50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:6*60+51.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[1], startOffset:3 });
+}//南口637
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:6*60+55, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:6*60+57, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:6*60+58, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:7*60+1.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:7*60+2.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:7*60+4, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:7*60+5, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:7*60+6, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:7*60+7.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:7*60+9, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:7*60+10.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[2], startOffset:3 });
+}//南口655
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:7*60+13, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:7*60+14.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:7*60+15.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:7*60+19, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:7*60+20.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:7*60+21.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:7*60+23, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:7*60+23.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:7*60+25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:7*60+27, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:7*60+29.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[3], startOffset:3 });
+}//南口713
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:7*60+31, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:7*60+33, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:7*60+34.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:7*60+37.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:7*60+38.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:7*60+40, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:7*60+41, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:7*60+42, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:7*60+43.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:7*60+45, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:7*60+47.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[3], startOffset:3 });
+}//南口731
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:7*60+59, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:8*60+1.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:8*60+3, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:8*60+5.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:8*60+7, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:8*60+8, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:8*60+9, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:8*60+10, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:8*60+11.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:8*60+13, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:8*60+15.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[3], startOffset:3 });
+}//南口759
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:8*60+20, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:8*60+22.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:8*60+23.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:8*60+26.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:8*60+27.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:8*60+28.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:8*60+29.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:8*60+30.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:8*60+31.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:8*60+33.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:8*60+35, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[2], startOffset:3 });
+}//南口820
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:8*60+45, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:8*60+47.10, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:8*60+48.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:8*60+51.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:8*60+52.10, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:8*60+53.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:8*60+54.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:8*60+55.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:8*60+57, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:8*60+58.85, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:9*60+0.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[2], startOffset:3 });
+}//南口845
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:10*60+10, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:10*60+12.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:10*60+13.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:10*60+16.10, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:10*60+18.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:10*60+19.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:10*60+20.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:10*60+21.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:10*60+22.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:10*60+23.80, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:8*60+25.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[2], startOffset:3 });
+}//南口1010
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:10*60+44, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:10*60+46, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:10*60+46.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:10*60+50.10, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:10*60+51.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:10*60+52.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:10*60+53.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:10*60+54.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:10*60+55.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:10*60+57, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:8*60+59.10, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[2], startOffset:3 });
+}//南口1044
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:11*60+7, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"大崎台一丁目", time:11*60+8.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"寺崎小学校", time:11*60+9.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_kokosaki.png"},
+    {stop:"佐倉南高校", time:11*60+13.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台五丁目", time:11*60+14.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台公園", time:11*60+15.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台四丁目", time:11*60+16.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"根郷保育園", time:11*60+17.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"寺崎小学校", time:11*60+18.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"大崎台一丁目", time:11*60+20, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:8*60+21.80, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_kokosaki_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[2], startOffset:3 });
+}//南口1107
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:11*60+35, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:11*60+36.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:11*60+37.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:11*60+38.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:11*60+39.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:11*60+40.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:11*60+41.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:11*60+42.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:11*60+46.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:11*60+47.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:8*60+50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[5], startOffset:3 });
+}//南口1135
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:12*60+7, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:12*60+9.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:12*60+10, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:12*60+11.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:12*60+12.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:12*60+13.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:12*60+14.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:12*60+16, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:12*60+19.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:12*60+20.10, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:12*60+22, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[5], startOffset:3 });
+}//南口1207
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:12*60+38, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:12*60+40, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:12*60+41.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:12*60+42.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:12*60+43.60, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:12*60+44.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:12*60+46, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:12*60+47.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:12*60+50.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:12*60+51.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:12*60+54, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[5], startOffset:3 });
+}//南口1238
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:13*60+5, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:13*60+6.80, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:13*60+7.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:13*60+9, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:13*60+10, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:13*60+11, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:13*60+12.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:13*60+13.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:13*60+16.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:13*60+17.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:13*60+19.60, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[5], startOffset:3 });
+}//南口1305
+
+for(let h=5; h<=24; h++){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:13*60+20}, {stop:"大崎台一丁目", time:13*60+21.75}
+  ];
+  busSchedules.push({ schedule, info: busInfos[18], arrow:"⬇️", left:212, startOffset:2 });
+}//南口1320 回送 田町車庫
+
+for(let h=5; h<=24; h++){
+  const schedule = [
+    {stop:"大崎台一丁目", time:15*60+40}, {stop:"ＪＲ佐倉駅南口", time:15*60+42.25}
+  ];
+  busSchedules.push({ schedule, info: busInfos[18], arrow:"⬆️", left:172, startOffset:2 });
+}//田町車庫1530 回送 南口
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:15*60+48, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:15*60+50.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:15*60+51.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:15*60+53, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:15*60+53.80, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:15*60+54.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:15*60+55.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:15*60+57, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:16*60+1.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:16*60+3.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:16*60+5.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[6], startOffset:3 });
+}//南口1548
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:16*60+22, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:16*60+24.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:16*60+26, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:16*60+27.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:16*60+28.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:16*60+29.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:16*60+30.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:16*60+32, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:16*60+38.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:16*60+40, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:16*60+41.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[6], startOffset:3 });
+}//南口1622
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:16*60+55, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:16*60+57.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:16*60+59.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:17*60+1, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:17*60+2, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:17*60+3.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:17*60+4.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:17*60+5.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:17*60+13.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:17*60+15.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:17*60+17.10, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[6], startOffset:3 });
+}//南口1655
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:17*60+15, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:17*60+17.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:17*60+19.10, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:17*60+20.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:17*60+21.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:17*60+22.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:17*60+23.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:17*60+25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:17*60+35.10, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:17*60+37.50, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:17*60+39.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[7], startOffset:3 });
+}//南口1715
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:17*60+46, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:17*60+48.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:17*60+49.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:17*60+51, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:17*60+52, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:17*60+22.53, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:17*60+54.25, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:17*60+55.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:18*60+18.25, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:18*60+19.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:18*60+22, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[7], startOffset:3 });
+}//南口1746
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:18*60+23, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台一丁目", time:18*60+24.75, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"寺崎小学校", time:18*60+26, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"根郷保育園", time:18*60+27.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台四丁目", time:18*60+28.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台公園", time:18*60+29.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"大崎台五丁目", time:18*60+30.50, arrow:"⬇️", left:212, icon:"icon/nanko/cg752_danchi.png"},
+    {stop:"佐倉南高校", time:18*60+31.75, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"寺崎小学校", time:18*60+44, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"大崎台一丁目", time:18*60+45, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:18*60+47, arrow:"⬆️", left:172, icon:"icon/nanko/cg752_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[7], startOffset:3 });
+}//南口1814
+
+for(let h=5; h<=24; h++){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:18*60+48}, {stop:"ＪＲ佐倉駅南口", time:18*60+48.10}
+  ];
+  busSchedules.push({ schedule, info: busInfos[18], arrow:"⬇️", left:212, startOffset:2 });
+}//南口1847 回送 田町車庫
+
+//S1702
+
+for(let h=5; h<=24; h++){
+  const schedule = [
+    {stop:"大崎台一丁目", time:15*60+3}, {stop:"ＪＲ佐倉駅南口", time:15*60+4.75}
+  ];
+  busSchedules.push({ schedule, info: busInfos[19], arrow:"⬆️", left:172, startOffset:2 });
+}//田町車庫1530 回送 南口
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:15*60+10, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台一丁目", time:15*60+12.25, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"寺崎小学校", time:15*60+13.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"根郷保育園", time:15*60+14.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台四丁目", time:15*60+15.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台公園", time:15*60+16.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台五丁目", time:15*60+16.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"佐倉南高校", time:15*60+18, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"寺崎小学校", time:16*60+22.75, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"大崎台一丁目", time:16*60+23.50, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:16*60+25.25, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[10], startOffset:3 });
+}//南口1510
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:15*60+30, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台一丁目", time:15*60+32, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"寺崎小学校", time:15*60+33.40, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"根郷保育園", time:15*60+34.60, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台四丁目", time:15*60+35.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台公園", time:15*60+36.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台五丁目", time:15*60+37.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"佐倉南高校", time:15*60+38.75, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"寺崎小学校", time:16*60+42.30, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"大崎台一丁目", time:16*60+43.75, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:16*60+45.25, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[10], startOffset:3 });
+}//南口1510
+
+for(let h=5; h<=24; h++){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:15*60+46}, {stop:"大崎台一丁目", time:15*60+47.50}
+  ];
+  busSchedules.push({ schedule, info: busInfos[20], arrow:"⬇️", left:212, startOffset:2 });
+}//南口1546 回送 田町車庫
+
+for(let h=5; h<=24; h++){
+  const schedule = [
+    {stop:"大崎台一丁目", time:18*60+54}, {stop:"ＪＲ佐倉駅南口", time:18*60+56}
+  ];
+  busSchedules.push({ schedule, info: busInfos[19], arrow:"⬆️", left:172, startOffset:2 });
+}//田町車庫1841 回送 南口
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:19*60+1, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台一丁目", time:19*60+3.10, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"寺崎小学校", time:19*60+4.25, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"根郷保育園", time:19*60+5.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台四丁目", time:19*60+6.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台公園", time:19*60+7.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台五丁目", time:19*60+8.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"佐倉南高校", time:19*60+10.80, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"寺崎小学校", time:19*60+17, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"大崎台一丁目", time:19*60+18.25, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:19*60+20, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[11], startOffset:3 });
+}//南口1901
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:19*60+26, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台一丁目", time:19*60+27.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"寺崎小学校", time:19*60+28.80, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"根郷保育園", time:19*60+30, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台四丁目", time:19*60+31, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台公園", time:19*60+32.10, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台五丁目", time:19*60+33.25, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"佐倉南高校", time:19*60+34.40, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"寺崎小学校", time:19*60+38.10, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"大崎台一丁目", time:19*60+39.50, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:19*60+41.25, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[10], startOffset:3 });
+}//南口1926
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:19*60+46, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台一丁目", time:19*60+47.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"寺崎小学校", time:19*60+49, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"根郷保育園", time:19*60+50.10, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台四丁目", time:19*60+51.25, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台公園", time:19*60+51.25, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台五丁目", time:19*60+52.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"佐倉南高校", time:19*60+53.40, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"寺崎小学校", time:19*60+58.75, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"大崎台一丁目", time:19*60+59.50, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:20*60+1.10, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[10], startOffset:3 });
+}//南口1946
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:20*60+20, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台一丁目", time:20*60+21.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"寺崎小学校", time:20*60+23.10, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"根郷保育園", time:20*60+24.25, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台四丁目", time:20*60+25.25, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台公園", time:20*60+26.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台五丁目", time:20*60+27.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"佐倉南高校", time:20*60+28.50, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"寺崎小学校", time:20*60+32.25, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"大崎台一丁目", time:20*60+33, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:20*60+35, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[10], startOffset:3 });
+}//南口2020
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:20*60+53, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台一丁目", time:20*60+54.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"寺崎小学校", time:20*60+55.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"根郷保育園", time:20*60+56.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台四丁目", time:20*60+57.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台公園", time:20*60+58.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台五丁目", time:20*60+59.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"佐倉南高校", time:21*60+0.75, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"寺崎小学校", time:21*60+4.25, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"大崎台一丁目", time:21*60+5.50, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:21*60+7.25, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[10], startOffset:3 });
+}//南口2053
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:21*60+22, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台一丁目", time:21*60+23.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"寺崎小学校", time:21*60+24.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"根郷保育園", time:21*60+26, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台四丁目", time:21*60+27, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台公園", time:21*60+28.25, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台五丁目", time:21*60+29.25, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"佐倉南高校", time:21*60+30.25, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"寺崎小学校", time:21*60+33.75, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"大崎台一丁目", time:21*60+34.50, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:20*60+36.25, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[13], startOffset:3 });
+}//南口2122
+
+for(let h=5; h<=24; h+=2){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:21*60+47, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台一丁目", time:21*60+48.50, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"寺崎小学校", time:21*60+49.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"根郷保育園", time:21*60+50.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台四丁目", time:21*60+51.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台公園", time:21*60+52.75, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"大崎台五丁目", time:21*60+54, arrow:"⬇️", left:212, icon:"icon/nanko/LR_danchi.png"},
+    {stop:"佐倉南高校", time:21*60+55, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"寺崎小学校", time:21*60+58.75, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"大崎台一丁目", time:21*60+59.50, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"},
+    {stop:"ＪＲ佐倉駅南口", time:22*60+1, arrow:"⬆️", left:172, icon:"icon/nanko/LR_danchi_2.png"}
+  ];
+  busSchedules.push({ schedule, info: busInfos[14], startOffset:3 });
+}//南口2122
+
+for(let h=5; h<=24; h++){
+  const schedule = [
+    {stop:"ＪＲ佐倉駅南口", time:22*60+2}, {stop:"大崎台一丁目", time:22*60+3.75}
+  ];
+  busSchedules.push({ schedule, info: busInfos[20], arrow:"⬇️", left:212, startOffset:2 });
+}//南口2202 回送 田町車庫
+
+
+
+
+let buses = [];
+const busEndTimes = new Map();
+
+function getBusPosition(busObj){
+  const schedule = busObj.schedule;
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes() + now.getSeconds()/60;
+
+  if(nowMin < schedule[0].time - (busObj.startOffset || 0)) return null;
+
+  const last = schedule[schedule.length-1];
+
+  if(nowMin > last.time + 1) return null;
+
+  if(nowMin >= last.time){
+    const arrow = last.arrow || busObj.arrow || "⬆️";
+    const left = last.left || busObj.left || 60;
+
+    if(!busEndTimes.has(busObj)) busEndTimes.set(busObj, Date.now());
+    const elapsed = (Date.now() - busEndTimes.get(busObj))/1000;
+    if(elapsed > 20) return null;
+
+    return { stop: last.stop, arrow, left };
+  }
+
+  for(let i=0;i<schedule.length-1;i++){
+    const current = schedule[i];
+    const next = schedule[i+1];
+
+    if(nowMin >= current.time && nowMin < next.time){
+      if(busEndTimes.has(busObj)) busEndTimes.delete(busObj);
+
+      return {
+  stop: current.stop,
+  arrow: current.arrow || busObj.arrow || "⬇️",
+  left: current.left || busObj.left || 212,
+  icon: current.icon || busObj.info.icon   // ←追加
+};
+    }
+  }
+
+  return null;
+}
+
+function updateBuses(){
+  buses.forEach(b=>b.remove());
+  buses = [];
+
+  busSchedules.forEach(busObj=>{
+    const pos = getBusPosition(busObj);
+    if(!pos) return;
+
+    const y = stopPositions[pos.stop];
+    if(y===undefined) return;
+
+    const bus = document.createElement("div");
+    bus.className="bus";
+    const img = document.createElement("img");
+
+// busInfosで設定した画像を使う
+img.src = pos.icon || busObj.info.icon;
+
+
+bus.appendChild(img);
+    bus.style.left = pos.left+"px";
+    bus.style.top = y+"px";
+
+bus.onclick = ()=>{
+  const info = busObj.info;
+
+  const msg =
+`行先: ${info.destination}
+系統: ${info.route}
+行先表示: ${info.display}
+経由: ${info.via}
+運用番号: ${info.number}
+遅延予想: ${info.delay}
+
+[運用表を見る]`;
+
+  if(confirm(msg)){
+    showDiagram(info.diagram);
+  }
+};
+
+    document.querySelector(".container").appendChild(bus);
+    buses.push(bus);
+  });
+}
+
+setInterval(updateBuses,1000);
+updateBuses();
+
+function showDiagram(img){
+  const box = document.getElementById("diagramBox");
+  const image = document.getElementById("diagramImg");
+
+  image.src = img;
+  box.style.display = "block";
+}
+
+document.getElementById("diagramBox").onclick = function(){
+  this.style.display = "none";
+}
+
+</script>
+</body>
+</html>

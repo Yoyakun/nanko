@@ -102,32 +102,32 @@ updateTime();
 // バス情報
 const busInfos = [
 //S1701
-  { destination:"ＪＲ佐倉駅南口", route:"669系統", display:"170-4番", via:"佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_jrsakura.png", diagram:"table/someino/W_U501.png" },//佐倉南高校→JR佐倉駅南口 0
-  { destination:"ＪＲ佐倉駅南口", route:"666系統", display:"170-1番", via:"ＪＲ佐倉駅南口～佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", diagram:"table/someino/W_U501.png" },//定時 高校先回り 1
-  { destination:"ＪＲ佐倉駅南口", route:"666系統", display:"170-1番", via:"ＪＲ佐倉駅南口～佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 高校先回り 2
-  { destination:"ＪＲ佐倉駅南口", route:"666系統", display:"170-1番", via:"ＪＲ佐倉駅南口～佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"約3～5分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 高校先回り 3
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", diagram:"table/someino/W_U501.png" },//定時 団地回り 4
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 団地回り 5
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"約4～9分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 団地先回り 6
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"約10～20分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 団地先回り 7
-  { destination:"ＪＲ佐倉駅南口", route:"668系統", display:"170-3番", via:"ＪＲ佐倉駅南口～佐倉南高校", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_minami.png", diagram:"table/someino/W_U501.png" },//佐倉南高校→JR佐倉駅南口 8
+  { destination:"ＪＲ佐倉駅南口", route:"669系統", display:"170-4番", via:"佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_jrsakura.png", diagram:"table/nanko/w_S1701.png" },//佐倉南高校→JR佐倉駅南口 0
+  { destination:"ＪＲ佐倉駅南口", route:"666系統", display:"170-1番", via:"ＪＲ佐倉駅南口～佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", diagram:"table/nanko/w_S1701.png" },//定時 高校先回り 1
+  { destination:"ＪＲ佐倉駅南口", route:"666系統", display:"170-1番", via:"ＪＲ佐倉駅南口～佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"約1～3分遅れ 終点定時", diagram:"table/nanko/w_S1701.png" },//定着 高校先回り 2
+  { destination:"ＪＲ佐倉駅南口", route:"666系統", display:"170-1番", via:"ＪＲ佐倉駅南口～佐倉南高校～ＪＲ佐倉駅南口", number:"S1701", delay:"約3～5分遅れ", diagram:"table/nanko/w_S1701.png" },//遅れ 高校先回り 3
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", diagram:"table/nanko/w_S1701.png" },//定時 団地回り 4
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"約1～3分遅れ 終点定時", diagram:"table/nanko/w_S1701.png" },//定着 団地回り 5
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"約4～9分遅れ", diagram:"table/nanko/w_S1701.png" },//遅れ 団地先回り 6
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1701", delay:"約10～20分遅れ", diagram:"table/nanko/w_S1701.png" },//遅れ 団地先回り 7
+  { destination:"ＪＲ佐倉駅南口", route:"668系統", display:"170-3番", via:"ＪＲ佐倉駅南口～佐倉南高校", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_minami.png", diagram:"table/nanko/w_S1701.png" },//佐倉南高校→JR佐倉駅南口 8
   //S1702
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"定着", diagram:"table/someino/W_U501.png" },//定時 団地回り 9
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 団地回り 10
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約4～9分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 団地先回り 11
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約10～15分遅れ", diagram:"table/someino/W_U501.png" },//遅れ 団地先回り 12
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"定着", diagram:"table/nanko/w_S1702.png" },//定時 団地回り 9
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約1～3分遅れ 終点定時", diagram:"table/nanko/w_S1702.png" },//定着 団地回り 10
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約4～9分遅れ", diagram:"table/nanko/w_S1702.png" },//遅れ 団地先回り 11
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約10～15分遅れ", diagram:"table/nanko/w_S1702.png" },//遅れ 団地先回り 12
 
   //S1702 終前終車
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番 終前", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 団地回り 13
-  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番 終車", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約1～3分遅れ 終点定時", diagram:"table/someino/W_U501.png" },//定着 団地回り 14
-  { destination:"ＪＲ佐倉駅南口", route:"668系統", display:"170-3番 終車", via:"ＪＲ佐倉駅南口～佐倉南高校", number:"S1702", delay:"定着", icon:"icon/nanko/cg752_minami.png", diagram:"table/someino/W_U501.png" },//佐倉南高校→JR佐倉駅南口 15
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番 終前", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約1～3分遅れ 終点定時", diagram:"table/nanko/w_S1702.png" },//定着 団地回り 13
+  { destination:"ＪＲ佐倉駅南口", route:"667系統", display:"170-2番 終車", via:"ＪＲ佐倉駅南口～大崎台団地～ＪＲ佐倉駅南口", number:"S1702", delay:"約1～3分遅れ 終点定時", diagram:"table/nanko/w_S1702.png" },//定着 団地回り 14
+  { destination:"ＪＲ佐倉駅南口", route:"668系統", display:"170-3番 終車", via:"ＪＲ佐倉駅南口～佐倉南高校", number:"S1702", delay:"定着", icon:"icon/nanko/cg752_minami.png", diagram:"table/nanko/w_S1702.png" },//佐倉南高校→JR佐倉駅南口 15
 
   //南校回送
-  { destination:"佐倉南高校", route:"00系統", display:"000-1番", via:"田町車庫～佐倉南高校", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_kaiso.png", diagram:"table/someino/W_U501.png" },//田町車庫→佐倉南高校 16
-  { destination:"ＪＲ佐倉駅南口", route:"00系統", display:"000-1番", via:"田町車庫～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_kaiso.png", diagram:"table/someino/W_U501.png" },//田町車庫→JR佐倉駅南口 17
-  { destination:"田町車庫", route:"00系統", display:"000-1番", via:"ＪＲ佐倉駅南口～田町車庫", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_kaiso.png", diagram:"table/someino/W_U501.png" },//JR佐倉駅南口→田町車庫 18
-  { destination:"ＪＲ佐倉駅南口", route:"00系統", display:"000-1番", via:"田町車庫～ＪＲ佐倉駅南口", number:"S1702", delay:"定着", icon:"icon/nanko/LR_kaiso.png", diagram:"table/someino/W_U501.png" },//田町車庫→JR佐倉駅南口 19
-  { destination:"田町車庫", route:"00系統", display:"000-1番", via:"ＪＲ佐倉駅南口～田町車庫", number:"S1702", delay:"定着", icon:"icon/nanko/LR_kaiso.png", diagram:"table/someino/W_U501.png" },//JR佐倉駅南口→田町車庫 20
+  { destination:"佐倉南高校", route:"00系統", display:"000-1番", via:"田町車庫～佐倉南高校", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_kaiso.png", diagram:"table/nanko/w_S1701.png" },//田町車庫→佐倉南高校 16
+  { destination:"ＪＲ佐倉駅南口", route:"00系統", display:"000-1番", via:"田町車庫～ＪＲ佐倉駅南口", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_kaiso.png", diagram:"table/nanko/w_S1701.png" },//田町車庫→JR佐倉駅南口 17
+  { destination:"田町車庫", route:"00系統", display:"000-1番", via:"ＪＲ佐倉駅南口～田町車庫", number:"S1701", delay:"定着", icon:"icon/nanko/cg752_kaiso.png", diagram:"table/nanko/w_S1701.png" },//JR佐倉駅南口→田町車庫 18
+  { destination:"ＪＲ佐倉駅南口", route:"00系統", display:"000-1番", via:"田町車庫～ＪＲ佐倉駅南口", number:"S1702", delay:"定着", icon:"icon/nanko/LR_kaiso.png", diagram:"table/nanko/w_S1702.png" },//田町車庫→JR佐倉駅南口 19
+  { destination:"田町車庫", route:"00系統", display:"000-1番", via:"ＪＲ佐倉駅南口～田町車庫", number:"S1702", delay:"定着", icon:"icon/nanko/LR_kaiso.png", diagram:"table/nanko/w_S1702.png" },//JR佐倉駅南口→田町車庫 20
 ];
 
 // バススケジュール（全便 6時～22時）
